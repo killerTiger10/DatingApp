@@ -6,9 +6,14 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Import the necessary routes and middlewares
+const authRoutes = require("./routes/authRoutes");
+const authenticate = require("./middlewares/authMiddleware");
+const Post = require("./models/Post"); // Import Post model
+
 // Middleware
-app.use(cors());
-app.use(express.json()); // To parse JSON data
+app.use(cors()); // Enable Cross-Origin Resource Sharing
+app.use(express.json()); // Middleware to parse incoming JSON requests
 
 // Basic Route
 app.get("/", (req, res) => {
@@ -22,9 +27,10 @@ mongoose
     console.log("MongoDB connected...");
   })
   .catch((err) => {
-    console.log("MongoDB connection error:", err);
+    console.error("MongoDB connection error:", err);
   });
-// Handling Connection
+
+// Handle MongoDB Connection Events
 const db = mongoose.connection;
 db.on("error", (error) => {
   console.error("MongoDB connection error:", error);
@@ -36,7 +42,7 @@ db.on("disconnected", () => {
   console.log("Disconnected from MongoDB");
 });
 
-// Close the connection
+// Graceful MongoDB shutdown on application termination
 process.on("SIGINT", () => {
   mongoose.connection.close(() => {
     console.log(
@@ -48,15 +54,12 @@ process.on("SIGINT", () => {
 
 /* ================================================================================================================================= */
 
-// Import the Post model
-const Post = require("./models/Post");
-
-// Route to get all posts
-app.get("/posts", async (req, res) => {
+// Routes for Posts
+// Protect the following routes using the authentication middleware
+app.get("/posts", authenticate, async (req, res) => {
   try {
     const posts = await Post.find(); // Fetch all posts from the database
-    res.json(posts); // Send the posts as a JSON response
-    res.status(200).json({ error: "Fetched posts" });
+    res.status(200).json(posts); // Return posts as a JSON response
   } catch (err) {
     res.status(500).json({ error: "Error fetching posts" });
   }
@@ -65,9 +68,9 @@ app.get("/posts", async (req, res) => {
 // Route to create a new post
 app.post("/posts", async (req, res) => {
   try {
-    const newPost = new Post(req.body); // Create a new post
-    const savedPost = await newPost.save(); // Save to the database
-    res.status(201).json(savedPost); // Send the saved post back
+    const newPost = new Post(req.body); // Create a new post from the request body
+    const savedPost = await newPost.save(); // Save the post to the database
+    res.status(201).json(savedPost); // Return the saved post
   } catch (err) {
     // Check if it's a Mongoose validation error
     if (err.name === "ValidationError") {
@@ -82,6 +85,7 @@ app.post("/posts", async (req, res) => {
 app.put("/posts/:id", async (req, res) => {
   const { title, content } = req.body;
 
+  // Validation for title and content
   if (!title || title.length < 3) {
     return res
       .status(400)
@@ -105,7 +109,7 @@ app.put("/posts/:id", async (req, res) => {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    res.status(200).json(post);
+    res.status(200).json(post); // Return the updated post
   } catch (err) {
     res
       .status(500)
@@ -122,7 +126,7 @@ app.delete("/posts/:id", async (req, res) => {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    res.status(200).json({ message: "Post deleted successfully" });
+    res.status(200).json({ message: "Post deleted successfully" }); // Return success message
   } catch (err) {
     res
       .status(500)
@@ -130,28 +134,47 @@ app.delete("/posts/:id", async (req, res) => {
   }
 });
 
-// test
+// Error Testing Route (for demonstration)
 app.get("/error-test", (req, res, next) => {
-  // Simulating an error
   const err = new Error("This is a test error!");
-  err.status = 400; // You can set a custom status code
-  next(err); // Pass the error to the error-handling middleware
+  err.status = 400;
+  next(err); // Pass the error to the error handler
 });
 
-// 404 Handler (Optional but recommended)
+/* ================================================================================================================================= */
+
+// Routes for Authentication (Register & Login)
+app.use("/auth", authRoutes); // Use the authentication routes
+
+/*
+  POST /auth/register    - Register a new user
+  POST /auth/login       - Log in and return an auth token
+*/
+
+/* ================================================================================================================================= */
+
+// 404 Route Handler for unhandled routes
 app.use((req, res, next) => {
   const err = new Error("Route not found");
   err.status = 404;
-  next(err);
+  next(err); // Pass the error to the error handler
 });
 
-// Error-handling middleware (Centralized error handling)
+// Centralized Error Handling Middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack); // Log the error
-  res.status(500).json({ message: "An error occurred", error: err.message });
+  console.error(err.stack); // Log the error stack
+  res
+    .status(err.status || 500)
+    .json({ message: err.message || "An error occurred", error: err.message });
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+/* ================================================================================================================================= */
+
+// Start the Express server
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+module.exports = app; // Export the app for testing
