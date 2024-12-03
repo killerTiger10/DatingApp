@@ -8,8 +8,12 @@ const PORT = process.env.PORT || 8080;
 
 // Import the necessary routes and middlewares
 const authRoutes = require("./routes/authRoutes");
+const profileRoutes = require("./routes/profileRoutes"); // Import the profile routes
+
 const authenticate = require("./middlewares/authMiddleware");
 const Post = require("./models/Post"); // Import Post model
+const router = express.Router();
+const profileController = require("./controllers/profileController");
 
 // Middleware
 app.use(cors()); // Enable Cross-Origin Resource Sharing
@@ -150,6 +154,8 @@ app.use("/auth", authRoutes); // Use the authentication routes
   POST /auth/register    - Register a new user
   POST /auth/login       - Log in and return an auth token
 */
+/* Routes for Profile */
+app.use("/profile", profileRoutes); // Profile routes
 
 /* ================================================================================================================================= */
 
@@ -179,10 +185,10 @@ if (require.main === module) {
 /* ================================================================================================================================= */
 
 // Close the Express Server
-process.on("SIGINT", () => {
-  server.close(() => {
-    console.log("Server closed gracefully");
-  });
-});
+// process.on("SIGINT", () => {
+//   server.close(() => {
+//     console.log("Server closed gracefully");
+//   });
+// });
 
 module.exports = app; // Export the app for testing

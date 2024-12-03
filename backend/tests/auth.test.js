@@ -29,6 +29,9 @@ describe("Auth Routes", () => {
       .post("/auth/register")
       .send(requestData);
 
+    console.log("should return 404", response.status);
+    console.log("should return 404", response.body);
+
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty("username", requestData.username);
     expect(response.body).toHaveProperty("email", requestData.email);
