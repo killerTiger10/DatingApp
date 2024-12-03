@@ -13,30 +13,69 @@ describe("Auth Routes", () => {
   });
 
   it("should register a new user", async () => {
-    console.log("Test: Register a new user");
-    const response = await request(app).post("/auth/register").send({
+    const requestData = {
       username: "johnDoe",
       email: "john.doe@example.com",
       password: "password123",
-    });
-    console.log("Response:", response.body);
+      firstName: "John",
+      lastName: "Doe",
+      age: 25,
+      gender: "Male", // Ensure it matches the enum values in the schema
+      location: "New York, USA", // Add location field
+      interests: ["hiking", "reading"],
+    };
+
+    const response = await request(app)
+      .post("/auth/register")
+      .send(requestData);
 
     expect(response.status).toBe(201);
-    expect(response.body).toHaveProperty("username", "johnDoe");
-    expect(response.body).toHaveProperty("email", "john.doe@example.com");
-    expect(response.body).toHaveProperty("accessToken");
-    expect(response.body).toHaveProperty("refreshToken");
+    expect(response.body).toHaveProperty("username", requestData.username);
+    expect(response.body).toHaveProperty("email", requestData.email);
+    expect(response.body).toHaveProperty("firstName", requestData.firstName);
+    expect(response.body).toHaveProperty("lastName", requestData.lastName);
+    expect(response.body).toHaveProperty("age", requestData.age);
+    expect(response.body).toHaveProperty("gender", requestData.gender);
+    expect(response.body).toHaveProperty("location", requestData.location);
+    expect(response.body).toHaveProperty("interests", requestData.interests);
   });
 
   it("should return an error if user tries to register with an existing email", async () => {
     console.log("Test: Duplicate registration with existing email");
-    const response = await request(app).post("/auth/register").send({
-      username: "johnDoe",
-      email: "john.doe@example.com",
-      password: "password123",
-    });
+
+    // First, register a user to set up a duplicate email scenario
+    await request(app)
+      .post("/auth/register")
+      .send({
+        username: "johnDoe",
+        email: "john.doe@example.com",
+        password: "password123",
+        firstName: "John",
+        lastName: "Doe",
+        age: 25,
+        gender: "Male",
+        location: "New York, USA",
+        interests: ["hiking", "reading"],
+      });
+
+    // Try to register again with the same email
+    const response = await request(app)
+      .post("/auth/register")
+      .send({
+        username: "janeDoe",
+        email: "john.doe@example.com", // Duplicate email
+        password: "password123",
+        firstName: "Jane",
+        lastName: "Doe",
+        age: 26,
+        gender: "Female",
+        location: "Los Angeles, USA",
+        interests: ["traveling", "photography"],
+      });
+
     console.log("Response:", response.body);
 
+    // Check response status and error message
     expect(response.status).toBe(400);
     expect(response.body).toHaveProperty("error", "Email already in use");
   });

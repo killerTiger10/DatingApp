@@ -3,30 +3,31 @@ const app = require("../server"); // Assuming this is where your Express app is 
 const User = require("../models/User");
 const mongoose = require("mongoose");
 
-let token;
+describe("Auth Routes", () => {
+    let token;
 
-beforeAll(async () => {
-  // Connect to the test database
-  await mongoose.connect(process.env.TEST_DB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+// beforeAll(async () => {
+//   // Connect to the test database
+//   await mongoose.connect(process.env.TEST_DB_URI, {
+//     useNewUrlParser: true,
+//     useUnifiedTopology: true,
+//   });
 
-  // Create a test user
-  const user = new User({
-    username: "testUser",
-    email: "test@example.com",
-    password: "password123",
-  });
-  await user.save();
-
-  // Log in to get a valid token
-  const response = await request(app).post("/auth/login").send({
-    email: "test@example.com",
-    password: "password123",
-  });
-  token = response.body.accessToken;
+// Create a test user
+const user = new User({
+  username: "testUser",
+  email: "test@example.com",
+  password: "password123",
 });
+ user.save();
+
+// Log in to get a valid token
+const response = await request(app).post("/auth/login").send({
+  email: "test@example.com",
+  password: "password123",
+});
+token = response.body.accessToken;
+// });
 
 afterAll(async () => {
   // Cleanup: Delete the test user and close the database connection
@@ -80,4 +81,5 @@ describe("Profile Routes", () => {
     expect(response.status).toBe(403);
     expect(response.body).toHaveProperty("error", "Invalid token");
   });
+});
 });

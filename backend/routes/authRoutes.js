@@ -9,10 +9,30 @@ router.use(cookieParser());
 
 // Register a new user
 router.post("/register", async (req, res) => {
-  const { username, email, password } = req.body;
+  const {
+    username,
+    email,
+    password,
+    firstName,
+    lastName,
+    age,
+    gender,
+    interests,
+    location,
+  } = req.body;
+  console.log("Request payload:", req.body);
 
   // Validate input
-  if (!username || !email || !password) {
+  if (
+    !username ||
+    !email ||
+    !password ||
+    !firstName ||
+    !lastName ||
+    !age ||
+    !gender ||
+    !location
+  ) {
     return res.status(400).json({ error: "All fields are required" });
   }
 
@@ -23,48 +43,64 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ error: "Email already in use" });
     }
 
-    // Check if username already exists (optional)
+    // Check if username already exists
     const existingUsername = await User.findOne({ username });
     if (existingUsername) {
+      console.log("e m a i l ! ! !");
       return res.status(400).json({ error: "Username already in use" });
     }
-    // Salt number
-    const salt = 10;
 
-    // Hash the password before saving
-    // const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    async function hashPassword(password, salt) {
-      try {
-        const hashedPassword = await bcrypt.hash(password, salt);
-        return hashedPassword;
-      } catch (err) {
-        console.error("Issue with password hash:", err);
-        throw err; // Or handle the error as needed
-      }
+    // Validate age (e.g., ensure it's a number and above a certain threshold, such as 18+)
+    if (typeof age !== "number" || age < 18) {
+      console.log("{age issue}");
+      return res
+        .status(400)
+        .json({ error: "Age must be a number and at least 18" });
     }
-    const hashedPassword = await hashPassword(password, salt);
+    // Normalize gender to match schema enum values (e.g., "male" to "Male")
+    const formattedGender = (val) => {
+      return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+    };
+    console.log("formatted Gender: -----------" + formattedGender(gender));
+    // Validate gender (optional, based on your application's requirements)
+    const validGenders = ["Male", "female", "non-binary", "other"];
+    if (!validGenders.includes(formattedGender(gender))) {
+      //gender.toLowerCase())) {
+      return res.status(400).json({ error: "Invalid gender" });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create a new user
     const user = new User({
       username,
       email,
-      password: hashedPassword, // Save the hashed password
+      password: hashedPassword,
+      firstName,
+      lastName,
+      age,
+      gender: formattedGender(gender),
+      location,
+      interests: interests || [], // Default to an empty array if interests are not provided
     });
+
     await user.save();
-    console.log("User: ", user);
-    // Generate JWT tokens (access and refresh)
+    console.log("User created:", user);
+
+    // Generate JWT tokens (might use it later)
     const { accessToken, refreshToken } = generateTokens(user);
 
-    // console.log("access: ", accessToken);
-    // console.log("refresh: ", refreshToken);
-    console.log("user created");
-    // Return user data and both tokens
+    // Return user data and tokens
     return res.status(201).json({
       username: user.username,
       email: user.email,
-      accessToken, // Return the access token in the response
-      refreshToken, // Return the refresh token in the response
+      firstName: user.firstName,
+      lastName: user.lastName,
+      age: user.age,
+      gender: user.gender,
+      interests: user.interests,
+      location: user.location,
     });
   } catch (err) {
     console.error(err);

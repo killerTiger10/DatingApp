@@ -176,5 +176,13 @@ if (require.main === module) {
     console.log(`Server is running on port ${PORT}`);
   });
 }
+/* ================================================================================================================================= */
+
+// Close the Express Server
+process.on("SIGINT", () => {
+  server.close(() => {
+    console.log("Server closed gracefully");
+  });
+});
 
 module.exports = app; // Export the app for testing
